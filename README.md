@@ -7,6 +7,6 @@
 
 ## Language
 
-**Python**
+**Python v3**
 
 ## Protocol Design
