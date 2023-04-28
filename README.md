@@ -2,11 +2,11 @@
 ## Group Members
 1. Kendrick Ngo - kendrickngo200@csu.fullerton.edu
 2. Michael Carey - mpcarey@csu.fullerton.edu
-3. Brian Yadgarian - [insert email]
+3. Brian Yadgarian - bpouryadegar@csu.fullerton.edu
 4. Mariah Harris- mharris2021@csu.fullerton.edu
 
 ## Language
 
-**Python v3**
+**Python**
 
 ## Protocol Design
