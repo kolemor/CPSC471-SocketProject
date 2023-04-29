@@ -1,41 +1,45 @@
-import socket, os
+import socket, sys, os
 
 # Main function, is called at end of program
 def main():
-    # Open socket for incoming connection from client
-    listenPort = 21 # FTP server always listens to this port
-    welcomeSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    welcomeSock.bind(('', listenPort))
-    welcomeSock.listen(1)
+  HOST = "localhost"
+  if len(sys.argv) < 2:
+    print("Correct format: python " + sys.argv[0] + " <port number>\n")
+  else:
+    PORT = int(sys.argv[1])
+    createControlConnection(PORT)
 
-    # Forever wait for incoming connection from client
-    while True:
-        print("\nWaiting for connection...\n")   
-        clientSock, addr = welcomeSock.accept()
-        print("Control connection accepted from client:", addr, "\n")
+def createControlConnection(port):
+  HOST = "localhost"
+  # Open socket for incoming connection from client
+  welcomeSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  welcomeSock.bind((HOST, port))
+  welcomeSock.listen(1)
 
-        # Receive a command from client through control connection here 
-        # and call the get, put or list funcion accordingly
-        #
-        # Client command handling code
-        #
-        cmd = clientSock.recv(1024).decode()
-        if cmd == 'LIST':
-            dirList(clientSock)
-        #elif cmd == 'PUT'
-        #elif cmd == 'GET'
-        elif cmd == 'QUIT':
-            clientSock.close()
-            break
-        else:
-            print('Unknown command')
+  # Forever wait for incoming connection from client
+  while True:
+    print("\nWaiting for connection...\n")   
+    clientSock, addr = welcomeSock.accept()
+    print("Control connection accepted from client:", addr, "\n")
 
-
-        downloadFile(clientSock, addr) # For testing connections
-        # uploadFile(clientSock, addr)
-        # dirList(clientSock, addr)
-
-        clientSock.close()
+    # Receive a command from client through control connection here 
+    # and call the get, put or list funcion accordingly
+    #
+    # Client command handling code
+    #
+    cmd = clientSock.recv(1024).decode()
+    if cmd == 'LIST':
+      dirList(clientSock)
+    #elif cmd == 'PUT':
+    #elif cmd == 'GET':
+    elif cmd == 'QUIT':
+      clientSock.close()
+      break
+    else:
+       print("Unexpected error: recieved unknown command")
+    #downloadFile(clientSock, addr) # For testing connections
+    # uploadFile(clientSock, addr)
+    # dirList(clientSock, addr)
 
 # Receive incoming bytes (including command, ephemeral port and file data)
 def recvAll(clientSock, numBytes):
@@ -80,10 +84,11 @@ def downloadFile(clientSock, addr):
 def uploadFile(clientSock, addr):
   return
 
+# Retrun a list of existing files in the files\ directory to client
 def dirList(clientSock):
-    files = os.listdir('.')
-    response = '\n'.join(files).encode()
-    clientSock.send(response)
-    clientSock.close()
+  files = os.listdir('.')
+  response = '\n'.join(files).encode()
+  clientSock.send(response)
+  return
 
 main()
