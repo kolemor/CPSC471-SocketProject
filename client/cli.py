@@ -57,16 +57,16 @@ def handle_user_input(connSocket):
                 print("Invalid command. Usage: 'put <filename>'.")
         elif command == "ls":
             print("LS command invoked in client")
-            if list_files(connSocket):
+            if lsCMD(connSocket):
                 print("Server error code encountered: resubmit command")
         elif command == "quit":
-            if quit_ftp(connSocket):
+            if quitCMD(connSocket):
                 print("Server error code encountered: resubmit command")
             else:
                 print('Goodbye...\n')
                 return False
         elif command == "shut":
-            if shutdown(connSocket):
+            if shutCMD(connSocket):
                 print("Server error code encountered: resubmit command")
             else:
                 print('Goodbye...\n')
@@ -107,7 +107,7 @@ def putCMD(connSocket, fileName):
         return True
 
 # Handles ls command
-def list_files(connSocket):
+def lsCMD(connSocket):
     # Send the LIST command to the server
     if sendCommand(connSocket, 'ls'):
         # Receive the response from the server
@@ -118,14 +118,14 @@ def list_files(connSocket):
         return True
 
 # handles quit command
-def quit_ftp(connSocket):
+def quitCMD(connSocket):
     if sendCommand(connSocket, 'quit'):
         print("Closing connection between client and server...\n")
     else:
         return True
 
 # Handles shutdown command
-def shutdown(connSocket):
+def shutCMD(connSocket):
     if sendCommand(connSocket, 'shut'):
         print("Shutting down server and client...\n")
     else:
@@ -223,11 +223,6 @@ def downloadFile(connSocket):
     serverSock.close()
     print("Data connection closed. \n")
     return
-
-
-def listDir(connSocket):
-    return
-
 
 if __name__ == '__main__':
     main()
