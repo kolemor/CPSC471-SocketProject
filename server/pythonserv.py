@@ -29,24 +29,36 @@ def createControlConnection(port):
     # Client command handling code
     #
     while True:
-      cmd = clientSock.recv(1024).decode()
-      if cmd == 'LIST':
+      command = str()
+      commandSize = str()
+      commandSize = recvAll(clientSock, 10)
+      if commandSize.decode():
+        command = recvAll(clientSock, int(commandSize.decode())).decode()
+      if command == 'put':
+        clientSock.send("150".encode())
+        downloadFile(clientSock, addr)
+      elif command == 'get':
+        clientSock.send("150".encode())
+        uploadFile(clientSock, addr)
+      elif command == 'ls':
+        clientSock.send("150".encode())
         dirList(clientSock)
-      #elif cmd == 'PUT':
-      #elif cmd == 'GET':
-      elif cmd == 'QUIT':
+      elif command == 'quit':
+        print("closing connection to client: ", addr, "\n")
+        clientSock.send("150".encode())
         break
-      elif cmd == 'SHUT':
+      elif command == 'shut':
         shut = True
+        print("Shutting down...\n")
+        clientSock.send("150".encode())
         break
       else:
-        print("Unexpected error: recieved unknown command")
-        break
-    #downloadFile(clientSock, addr) # For testing connections
-    # uploadFile(clientSock, addr)
-    # dirList(clientSock, addr)
+        print("Unexpected error: recieved unknown command\n")
+        clientSock.send("404".encode())
+
     clientSock.close()
     if shut:
+      print("Goodbye...\n")
       break
 
 # Receive incoming bytes (including command, ephemeral port and file data)
@@ -72,8 +84,16 @@ def createDataConnection(clientSock, addr):
     dataSock.connect((addr[0], ephemeralPort))
     return dataSock, ephemeralPort
 
+def getFileName(clientSock):
+    FileName = str()
+    FileNameSize = str()
+    FileNameSize = recvAll(clientSock, 10)
+    FileName = recvAll(clientSock, int(FileNameSize.decode())).decode()
+    return FileName
+
 # Download file that client is uploading
 def downloadFile(clientSock, addr):
+    fileName = getFileName(clientSock)
     dataSock, ephemeralPort = createDataConnection(clientSock, addr)  # Create data connection and connect to client to begin data transfer
     print("Data connection successfully established with client on ephemeral port #:", ephemeralPort ,"\n")
     fileData = str()
@@ -81,7 +101,9 @@ def downloadFile(clientSock, addr):
     fileSize = recvAll(dataSock, 10)
     print("Downloading...\n")
     fileData = recvAll(dataSock, int(fileSize.decode()))
-    print("Data Content:", fileData.decode(), "\n")  # Save the file in the files\ directory in the live version
+    with open(fileName, "wb") as file:
+       file.write(fileData)
+    file.close()
     print("Number of bytes received from client:", int(fileSize.decode()), "\n")
     print("Download Successful!\n")
     dataSock.close()
