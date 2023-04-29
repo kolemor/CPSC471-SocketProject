@@ -27,19 +27,25 @@ def createControlConnection(port):
     #
     # Client command handling code
     #
-    cmd = clientSock.recv(1024).decode()
-    if cmd == 'LIST':
-      dirList(clientSock)
-    #elif cmd == 'PUT':
-    #elif cmd == 'GET':
-    elif cmd == 'QUIT':
-      clientSock.close()
-      break
-    else:
-       print("Unexpected error: recieved unknown command")
+    while True:
+      cmd = clientSock.recv(1024).decode()
+      if cmd == 'LIST':
+        dirList(clientSock)
+      #elif cmd == 'PUT':
+      #elif cmd == 'GET':
+      elif cmd == 'QUIT':
+        break
+      elif cmd == 'SHUT':
+        shut = True
+        break
+      else:
+        print("Unexpected error: recieved unknown command")
     #downloadFile(clientSock, addr) # For testing connections
     # uploadFile(clientSock, addr)
     # dirList(clientSock, addr)
+    clientSock.close()
+    if shut:
+      break
 
 # Receive incoming bytes (including command, ephemeral port and file data)
 def recvAll(clientSock, numBytes):
