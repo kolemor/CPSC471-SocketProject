@@ -11,6 +11,7 @@ def main():
 
 def createControlConnection(port):
   HOST = "localhost"
+  shut = False
   # Open socket for incoming connection from client
   welcomeSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   welcomeSock.bind((HOST, port))
@@ -40,6 +41,7 @@ def createControlConnection(port):
         break
       else:
         print("Unexpected error: recieved unknown command")
+        break
     #downloadFile(clientSock, addr) # For testing connections
     # uploadFile(clientSock, addr)
     # dirList(clientSock, addr)
