@@ -72,7 +72,7 @@ def handle_user_input(connSocket):
                 print('Goodbye...\n')
                 return False
         else:
-            print("Invalid command. Please enter 'get', 'put', 'ls', or 'quit'.")
+            print("Invalid command. Type 'menu' for a list of appropriate commands")
 
 # Send commmand to server using control connection socket
 def sendCommand(connSock, command):
