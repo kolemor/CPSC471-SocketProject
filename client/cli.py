@@ -62,11 +62,12 @@ def handle_user_input(connSocket):
             print("LS command invoked in client")
             list_files(connSocket)
         elif command == "quit":
+            quit_ftp(connSocket)
             return False
-            # quit_ftp()
         else:
             print("Invalid command. Please enter 'get', 'put', 'ls', or 'quit'.")
 
+# Handles ls command
 def list_files(connSocket):
     # Send the LIST command to the server
     connSocket.sendall(b'LIST')
@@ -76,11 +77,14 @@ def list_files(connSocket):
 
     # Print the response to the console
     print(data)
+    
+# handles quit command
+def quit_ftp(connSocket):
+    connSocket.sendall(b'QUIT')
+    return
 
 # Client requests data connection from server and creates socket with
 # ephemeral prot for incoming connection from server
-
-
 def requestDataConnection(connSocket):
     # Generate random ephemeral port for data connection from server
     welcomeSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
