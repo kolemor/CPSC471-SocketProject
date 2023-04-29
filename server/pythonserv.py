@@ -19,6 +19,17 @@ def main():
         #
         # Client command handling code
         #
+        cmd = clientSock.recv(1024).decode()
+        if cmd == 'LIST':
+            dirList(clientSock)
+        #elif cmd == 'PUT'
+        #elif cmd == 'GET'
+        elif cmd == 'QUIT':
+            clientSock.close()
+            break
+        else:
+            print('Unknown command')
+
 
         downloadFile(clientSock, addr) # For testing connections
         # uploadFile(clientSock, addr)
@@ -69,8 +80,10 @@ def downloadFile(clientSock, addr):
 def uploadFile(clientSock, addr):
   return
 
-# Retrun a list of existing files in the files\ directory to client
-def dirList(clientSock, addr):
-   return
+def dirList(clientSock):
+    files = os.listdir('.')
+    response = '\n'.join(files).encode()
+    clientSock.send(response)
+    clientSock.close()
 
 main()

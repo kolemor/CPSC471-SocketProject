@@ -52,7 +52,7 @@ def handle_user_input(connSocket):
                 print("Invalid command. Usage: 'put <filename>'.")
         elif command == "ls":
             print("LS command invoked in client")
-            list_files(connSocket, args[0])
+            list_files(connSocket)
         elif command == "quit":
             return False
             # quit_ftp()
@@ -73,15 +73,12 @@ def main():
         controlCONN(host, port)
 
 
-def list_files(clientSOCKET):
-    """
-    Sends a request to the server to list all files in the current directory.
-    """
+def list_files(connSocket):
     # Send the LIST command to the server
-    clientSOCKET.sendall(b'LIST')
+    connSocket.sendall(b'LIST')
 
     # Receive the response from the server
-    data = clientSOCKET.recv(BUFFER_SIZE).decode()
+    data = connSocket.recv(BUFFER_SIZE).decode()
 
     # Print the response to the console
     print(data)
