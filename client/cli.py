@@ -3,9 +3,17 @@ import sys
 
 BUFFER_SIZE = 1024
 
+# Main function, called at the end
+def main():
+    if len(sys.argv) < 2:
+        print("\nCorrect format: python",
+              sys.argv[0], "<server hostname> <server port>\n")
+    else:
+        host = sys.argv[1]
+        port = int(sys.argv[2])
+        controlCONN(host, port)
+
 # Control connection function
-
-
 def controlCONN(host, port):
     connSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print(f"\nConnecting to FTP server: ({host}, {port})\n")
@@ -58,20 +66,6 @@ def handle_user_input(connSocket):
             # quit_ftp()
         else:
             print("Invalid command. Please enter 'get', 'put', 'ls', or 'quit'.")
-
-
-# Main function, called at the end
-
-
-def main():
-    if len(sys.argv) < 2:
-        print("\nCorrect format: python",
-              sys.argv[0], "<server hostname> <server port>\n")
-    else:
-        host = sys.argv[1]
-        port = int(sys.argv[2])
-        controlCONN(host, port)
-
 
 def list_files(connSocket):
     # Send the LIST command to the server
