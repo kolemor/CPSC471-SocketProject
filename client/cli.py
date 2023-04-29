@@ -64,6 +64,9 @@ def handle_user_input(connSocket):
         elif command == "quit":
             quit_ftp(connSocket)
             return False
+        elif command == "shut":
+            shutdown(connSocket)
+            return False
         else:
             print("Invalid command. Please enter 'get', 'put', 'ls', or 'quit'.")
 
@@ -77,10 +80,15 @@ def list_files(connSocket):
 
     # Print the response to the console
     print(data)
-    
+
 # handles quit command
 def quit_ftp(connSocket):
     connSocket.sendall(b'QUIT')
+    return
+
+# Handles shutdown command
+def shutdown(connSocket):
+    connSocket.sendall(b'SHUT')
     return
 
 # Client requests data connection from server and creates socket with
