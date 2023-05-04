@@ -1,78 +1,71 @@
-import socket, sys, os
-
-BUFFER_SIZE = 1024
+import socket, sys
 
 # Main function, called at the end
 def main():
-    if len(sys.argv) < 2:
-        print("\nCorrect format: python",
-              sys.argv[0], "<server hostname> <server port>\n")
+    if len(sys.argv) < 3:
+        print("\nCorrect format: python", sys.argv[0], "<server hostname> <server port>\n")
     else:
         host = sys.argv[1]
         port = int(sys.argv[2])
-        controlCONN(host, port)
+        connSock = controlCONN(host, port)
+    # Show menu
+    menuCMD()
+    # User terminal command handling
+    while True:
+        userInput = input("\nftp> ").split()
+        if len(userInput) > 1:
+            command = userInput[0]
+            fileName = userInput[1]
+        else:
+            command = userInput[0]
+        if command == "menu":
+            menuCMD()
+        elif command == "put":
+            uploadFile(connSock, fileName)
+        elif command == "get":
+            downloadFile(connSock, fileName)
+        elif command == "ls":
+            listDir(connSock)
+        elif command == "quit":
+            quit(connSock)
+            break
+        else:
+            print("\nInvalid command. Type 'menu' for a list of appropriate commands")
+
+    connSock.close()
+    print("Control connection to FTP server closed.\n")
+    print("Bye.\n")
+    return
 
 # Control connection function
 def controlCONN(host, port):
-    connSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    connSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print(f"\nConnecting to FTP server: ({host}, {port})\n")
-    connSocket.connect((host, port))
-    print("Control connection to FTP server successful.\n")
+    connSock.connect((host, port))
+    print("Control connection to FTP server successful.")
+    return connSock
 
-    # Process user commands here and send ...
-    handle_user_input(connSocket)
+# Client requests data connection from server and creates socket with 
+# ephemeral prot for incoming connection from server
+def requestDataConnection(connSock):
+    # Generate random ephemeral port for data connection from server
+    welcomeSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    welcomeSock.bind(('',0))
+    ephemeralPort = welcomeSock.getsockname()[1]
+    ephemeralPortCopy = ephemeralPort
 
-    connSocket.close()
-    print("Control connection to FTP server closed.\n")
-
-
-def handle_user_input(connSocket):
-    menuCMD()
-    """Asks the user for input and sends the correct command to other functions for get, put, ls, and quit.
-       """
-    while True:
-        # Ask for user input
-        user_input = input("ftp> ")
-
-        # Split the user input into command and arguments
-        input_parts = user_input.split()
-        command = input_parts[0].lower()
-        args = input_parts[1:]
-
-        # Check which command was given and call the appropriate function
-        if command == "menu":
-            menuCMD()
-        elif command == "get":
-            if len(args) == 1:
-                print("get function called")
-                downloadFile(connSocket)
-            else:
-                print("Invalid get command. Usage: 'get <filename>'.")
-        elif command == "put":
-            if len(args) == 1:
-                print("Put command called. Usage: 'put <filename>'.")
-                if putCMD(connSocket, args[0]):
-                    print("Server error code encountered: resubmit command")
-            else:
-                print("Invalid command. Usage: 'put <filename>'.")
-        elif command == "ls":
-            print("LS command invoked in client")
-            if lsCMD(connSocket):
-                print("Server error code encountered: resubmit command")
-        elif command == "quit":
-            if quitCMD(connSocket):
-                print("Server error code encountered: resubmit command")
-            else:
-                print('Goodbye...\n')
-                return False
-        elif command == "shut":
-            if shutCMD(connSocket):
-                print("Server error code encountered: resubmit command")
-            else:
-                print('Goodbye...\n')
-                return False
-        else:
-            print("Invalid command. Type 'menu' for a list of appropriate commands")
+    # Send ephemeral port to server and wait for data connection
+    ephemeralPortSizeStr = str(len(str(ephemeralPort)))
+    while len(ephemeralPortSizeStr) < 10:
+        ephemeralPortSizeStr = "0" + ephemeralPortSizeStr
+    ephemeralPort = ephemeralPortSizeStr.encode() + str(ephemeralPort).encode()
+    numSent = 0 
+    while len(ephemeralPort) > numSent:
+        numSent += connSock.send(ephemeralPort[numSent:])
+    print("Waiting for data connection from server on ephemeral port #", ephemeralPortCopy, "\n")
+    welcomeSock.listen(1)
+    serverSock, addr = welcomeSock.accept()
+    return serverSock, addr, ephemeralPortCopy
 
 # Send commmand to server using control connection socket
 def sendCommand(connSock, command):
@@ -83,76 +76,7 @@ def sendCommand(connSock, command):
     numSent = 0 
     while len(command) > numSent:
         numSent += connSock.send(command[numSent:])
-    CODE = int(connSock.recv(1024).decode())
-    if CODE == 150:
-        return True
-    else:
-        return False
-
-# Handles menu command
-def menuCMD():
-    print("Client Main Menu:")
-    print("menu - list commands")
-    print("get <filename> - download a file from the server")
-    print("put <filename> - upload a file to the server")
-    print("ls - list files on the server")
-    print("quit - exit the client")
-    print("shut - shutdown both client and server\n")
-
-# Handles put command
-def putCMD(connSocket, fileName):
-    if sendCommand(connSocket, 'put'):
-        uploadFile(connSocket, fileName)
-    else:
-        return True
-
-# Handles ls command
-def lsCMD(connSocket):
-    # Send the LIST command to the server
-    if sendCommand(connSocket, 'ls'):
-        # Receive the response from the server
-        data = connSocket.recv(BUFFER_SIZE).decode()
-        # Print the response to the console
-        print(data)
-    else:
-        return True
-
-# handles quit command
-def quitCMD(connSocket):
-    if sendCommand(connSocket, 'quit'):
-        print("Closing connection between client and server...\n")
-    else:
-        return True
-
-# Handles shutdown command
-def shutCMD(connSocket):
-    if sendCommand(connSocket, 'shut'):
-        print("Shutting down server and client...\n")
-    else:
-        return True
-
-# Client requests data connection from server and creates socket with
-# ephemeral prot for incoming connection from server
-def requestDataConnection(connSocket):
-    # Generate random ephemeral port for data connection from server
-    welcomeSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    welcomeSocket.bind(('', 0))
-    ephemeralPort = welcomeSocket.getsockname()[1]
-    ephemeralPortCopy = ephemeralPort
-
-    # Send the ephemeral port to server and wait for data connection
-    ephemeralPortSizeStr = str(len(str(ephemeralPort)))
-    while len(ephemeralPortSizeStr) < 10:
-        ephemeralPortSizeStr = "0" + ephemeralPortSizeStr
-    ephemeralPort = ephemeralPortSizeStr.encode() + str(ephemeralPort).encode()
-    numSent = 0
-    while len(ephemeralPort) > numSent:
-        numSent += connSocket.send(ephemeralPort[numSent:])
-    print("Waiting for data connection from server on ephemeral port#:",
-          ephemeralPortCopy, "\n")
-    welcomeSocket.listen(1)
-    serverSock, addr = welcomeSocket.accept()
-    return serverSock, addr, ephemeralPortCopy
+    return
 
 # Send file name being uploaded or downloaded to server
 def sendFileName(connSock, fileName):
@@ -165,20 +89,27 @@ def sendFileName(connSock, fileName):
         numSent += connSock.send(fileName[numSent:])
     return
 
-# Upload the file that server will be downloading using the data connection
-# established by server
-def uploadFile(connSocket, fileName):
-    sendFileName(connSocket, fileName)
+# Receive incoming bytes from data connection socket initiated by server
+def recvAll(serverSock, numBytes):
+  data = str()
+  tmpData = str()
+  data = data.encode()
+  while len(data) < numBytes:
+     tmpData =  serverSock.recv(numBytes)
+     if not tmpData:
+        break
+     data += tmpData
+  return data
+
+# Upload file that server will be receiving using data connection established by server
+def uploadFile(connSock, fileName):
+    sendCommand(connSock, 'put')
+    sendFileName(connSock, fileName)
     print("Requesting data connection from FTP server...\n")
-    serverSock, addr, ephemeralPort = requestDataConnection(connSocket)
-    print("Data connection accepted from server on ephemeral port #:",
-          ephemeralPort, "\n")
-    fileSize = os.path.getsize(fileName)
-    #serverSock.send(f"{fileSize}".encode())
+    serverSock, addr, ephemeralPort = requestDataConnection(connSock)
+    print("Data connection accepted from server on ephemeral port #", ephemeralPort, "\n")
     fileObj = open(fileName, "rb")
     print("Uploading...\n")
-    numSent = 0
-    fileData = 0
     while True:
         fileData = fileObj.read(65536)
         if fileData:
@@ -188,41 +119,67 @@ def uploadFile(connSocket, fileName):
             fileData = dataSizeStr.encode() + fileData
             numSent = 0
             while len(fileData) > numSent:
-                # Using the server socket for data connection established by server to send data back
-                numSent += serverSock.send(fileData[numSent:])
+                numSent += serverSock.send(fileData[numSent:])  # Using server socket for data connection established by server to send data back to client
         else:
             break
-    print("Upload completed.\n")
-    print("Uploaded file:", fileName, "\n")
-    print("Number of bytes sent to FTP server:", numSent, "\n")
+    print("Upload Successful.\n")
     serverSock.close()
-    fileObj.close()
     print("Data connection closed.\n")
     return
 
-
-def downloadFile(connSocket):
-    serverSock, addr, ephemeralPort = requestDataConnection(connSocket)
-    print("download function working??")
-    fileName = input("enter dl file: ")
-    try:
-        with open(fileName, "wb") as file:
-            print("Downloading...\n")
-            serverSock.send(fileName.encode())
-            fileSize = int(serverSock.recv(1024))
-            data = b''
-            while len(data) < fileSize:
-                packet = serverSock.recv(1024)
-                if not packet:
-                    break
-                data += packet
-            file.write(data)
-            print("File downloaded sucessfully. \n")
-    except FileNotFoundError:
-        print(f"Error: {fileName} not found. \n")
+# Download file that server will be sending using data connection established by server
+def downloadFile(connSock, fileName):
+    sendCommand(connSock, 'get')
+    sendFileName(connSock, fileName)
+    print("Requesting data connection from FTP server...\n")
+    serverSock, addr, ephemeralPort = requestDataConnection(connSock)
+    print("Data connection accepted from server on ephemeral port #", ephemeralPort, "\n")
+    fileData = str()
+    fileSize = str()
+    fileSize = recvAll(serverSock, 10)
+    fileData = recvAll(serverSock, int(fileSize.decode()))
+    print("Downloading...\n")
+    with open(fileName, "wb") as file:
+       file.write(fileData)
+    file.close()
+    print("Download Successful!\n")
     serverSock.close()
-    print("Data connection closed. \n")
+    print("Data connection closed.\n")
     return
 
-if __name__ == '__main__':
-    main()
+# Get list of files in server file directory (server_files)
+def listDir(connSock):
+    sendCommand(connSock, 'ls')
+    print("Requesting data connection from FTP server...\n")
+    serverSock, addr, ephemeralPort = requestDataConnection(connSock)
+    print("Data connection accepted from server on ephemeral port #", ephemeralPort, "\n")
+    print("Server files:\n")
+    while True:
+        fileName = str()
+        fileNameSize = str()
+        fileNameSize = recvAll(serverSock, 10)
+        if fileNameSize.decode():
+            fileName = recvAll(serverSock, int(fileNameSize.decode())).decode()
+        if fileName:
+            print("   ", fileName)
+        else:
+            break
+    serverSock.close()
+    print("\nData connection closed.\n")
+    return
+
+# Send quit command to server to let server know contoll connection has ended
+def quit(connSock):
+    sendCommand(connSock, 'quit')
+    return
+
+#Function controlling menu command
+def menuCMD():
+    print("\nClient Main Menu:\n")
+    print("menu - list commands")
+    print("get <filename> - download a file from the server")
+    print("put <filename> - upload a file to the server")
+    print("ls - list files on the server")
+    print("quit - exit the connection")
+    return
+main()
