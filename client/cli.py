@@ -1,8 +1,13 @@
-import socket, sys, os
+import socket
+import sys
+import os
+import subprocess
 
 BUFFER_SIZE = 1024
 
 # Main function, called at the end
+
+
 def main():
     if len(sys.argv) < 2:
         print("\nCorrect format: python",
@@ -13,6 +18,8 @@ def main():
         controlCONN(host, port)
 
 # Control connection function
+
+
 def controlCONN(host, port):
     connSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print(f"\nConnecting to FTP server: ({host}, {port})\n")
@@ -27,10 +34,11 @@ def controlCONN(host, port):
 
 
 def handle_user_input(connSocket):
-    menuCMD()
     """Asks the user for input and sends the correct command to other functions for get, put, ls, and quit.
        """
     while True:
+        # run the menu
+        menuCMD()
         # Ask for user input
         user_input = input("ftp> ")
 
@@ -75,12 +83,14 @@ def handle_user_input(connSocket):
             print("Invalid command. Type 'menu' for a list of appropriate commands")
 
 # Send commmand to server using control connection socket
+
+
 def sendCommand(connSock, command):
     commandSizeStr = str(len(str(command)))
     while len(commandSizeStr) < 10:
         commandSizeStr = "0" + commandSizeStr
     command = commandSizeStr.encode() + str(command).encode()
-    numSent = 0 
+    numSent = 0
     while len(command) > numSent:
         numSent += connSock.send(command[numSent:])
     CODE = int(connSock.recv(1024).decode())
@@ -90,6 +100,8 @@ def sendCommand(connSock, command):
         return False
 
 # Handles menu command
+
+
 def menuCMD():
     print("Client Main Menu:")
     print("menu - list commands")
@@ -100,6 +112,8 @@ def menuCMD():
     print("shut - shutdown both client and server\n")
 
 # Handles put command
+
+
 def putCMD(connSocket, fileName):
     if sendCommand(connSocket, 'put'):
         uploadFile(connSocket, fileName)
@@ -107,17 +121,49 @@ def putCMD(connSocket, fileName):
         return True
 
 # Handles ls command
+# def lsCMD(connSocket):
+#     # Send the LIST command to the server
+#     if sendCommand(connSocket, 'ls'):
+#         # Receive the response from the server
+#         data = connSocket.recv(BUFFER_SIZE).decode()
+#         # Print the response to the console
+#         print(data)
+#     else:
+#         return True
+
+
+# def lsCMD(connSocket):
+#     # Send the LIST command to the server
+#     if sendCommand(connSocket, '/bin/ls'):
+#         # receive response from the server
+#         data = connSocket.recv(BUFFER_SIZE).decode('utf-8')
+#         print(data, '\n')
+#         return False
+#     else:
+#         print('Failed to executed ls command')
+#         return True
+
+
 def lsCMD(connSocket):
-    # Send the LIST command to the server
-    if sendCommand(connSocket, 'ls'):
-        # Receive the response from the server
-        data = connSocket.recv(BUFFER_SIZE).decode()
-        # Print the response to the console
-        print(data)
+    # Get the path to the ls binary using the which command
+    which_output = subprocess.check_output(
+        ['which', 'ls']).decode('utf-8').strip()
+    ls_path = which_output.split('\n')[0]
+
+    # Send the LIST command to the server with the correct ls path
+    if sendCommand(connSocket, '{} -l'.format(ls_path)):
+        # receive response from the server
+        data = connSocket.recv(BUFFER_SIZE).decode('utf-8')
+        print(data, '\n')
+        return False
     else:
+        print('Failed to execute ls command')
         return True
 
+
 # handles quit command
+
+
 def quitCMD(connSocket):
     if sendCommand(connSocket, 'quit'):
         print("Closing connection between client and server...\n")
@@ -125,6 +171,8 @@ def quitCMD(connSocket):
         return True
 
 # Handles shutdown command
+
+
 def shutCMD(connSocket):
     if sendCommand(connSocket, 'shut'):
         print("Shutting down server and client...\n")
@@ -133,6 +181,8 @@ def shutCMD(connSocket):
 
 # Client requests data connection from server and creates socket with
 # ephemeral prot for incoming connection from server
+
+
 def requestDataConnection(connSocket):
     # Generate random ephemeral port for data connection from server
     welcomeSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -152,21 +202,26 @@ def requestDataConnection(connSocket):
           ephemeralPortCopy, "\n")
     welcomeSocket.listen(1)
     serverSock, addr = welcomeSocket.accept()
+    print("is this working?")
     return serverSock, addr, ephemeralPortCopy
 
 # Send file name being uploaded or downloaded to server
+
+
 def sendFileName(connSock, fileName):
     fileNameSizeStr = str(len(str(fileName)))
     while len(fileNameSizeStr) < 10:
         fileNameSizeStr = "0" + fileNameSizeStr
     fileName = fileNameSizeStr.encode() + str(fileName).encode()
-    numSent = 0 
+    numSent = 0
     while len(fileName) > numSent:
         numSent += connSock.send(fileName[numSent:])
     return
 
 # Upload the file that server will be downloading using the data connection
 # established by server
+
+
 def uploadFile(connSocket, fileName):
     sendFileName(connSocket, fileName)
     print("Requesting data connection from FTP server...\n")
@@ -174,7 +229,7 @@ def uploadFile(connSocket, fileName):
     print("Data connection accepted from server on ephemeral port #:",
           ephemeralPort, "\n")
     fileSize = os.path.getsize(fileName)
-    #serverSock.send(f"{fileSize}".encode())
+    # serverSock.send(f"{fileSize}".encode())
     fileObj = open(fileName, "rb")
     print("Uploading...\n")
     numSent = 0
@@ -223,6 +278,7 @@ def downloadFile(connSocket):
     serverSock.close()
     print("Data connection closed. \n")
     return
+
 
 if __name__ == '__main__':
     main()
