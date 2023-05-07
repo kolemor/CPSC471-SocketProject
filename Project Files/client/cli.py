@@ -21,9 +21,15 @@ def main():
         if command == "menu":
             menuCMD()
         elif command == "put":
-            uploadFile(connSock, fileName)
+            if len(userInput) == 2:
+                uploadFile(connSock, fileName)
+            else:
+                print("invalid input: please provide a filename")
         elif command == "get":
-            downloadFile(connSock, fileName)
+            if len(userInput) == 2:
+                downloadFile(connSock, fileName)
+            else:
+                print("invalid input: please provide a filename")
         elif command == "ls":
             listDir(connSock)
         elif command == "quit":
